@@ -1,25 +1,41 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import firebase from "./firebase";
-import Router from "next/router";
+import { createUser } from "./firestore";
 
-const authContext = createContext(null);
+interface User {
+  uid: string;
+  email: string;
+  name: string;
+  provider: string;
+  photoUrl: string;
+}
+
+interface UserAuthProvider {
+  loading: boolean;
+  user: User | false;
+  signinWithGitHub(): Promise<User | false>;
+  signout(): Promise<void>;
+}
+
+const authContext = createContext<UserAuthProvider>(null);
 
 export function AuthProvider({ children }) {
   const auth = useAuthProvider();
   return <authContext.Provider value={auth}>{children}</authContext.Provider>;
 }
 
-export const useAuth = () => {
+export function useAuth() {
   return useContext(authContext);
-};
+}
 
-function useAuthProvider() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+function useAuthProvider(): UserAuthProvider {
+  const [user, setUser] = useState<User | false>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const handleUser = async (rawUser) => {
+  async function handleUser(rawUser): Promise<User | false> {
     if (rawUser) {
-      const user = await formatUser(rawUser);
+      const user = formatUser(rawUser);
+      await createUser(user.uid, user);
       setUser(user);
       setLoading(false);
       return user;
@@ -28,37 +44,28 @@ function useAuthProvider() {
       setLoading(false);
       return false;
     }
-  };
+  }
 
-  const signinWithGitHub = async (redirect) => {
+  async function signinWithGitHub(): Promise<User | false> {
     setLoading(true);
-    return (
-      firebase
-        .auth()
-        //.signInWithRedirect(new firebase.auth.GithubAuthProvider())
-        .signInWithPopup(new firebase.auth.GithubAuthProvider())
-        .then((response) => {
-          handleUser(response.user);
+    const provider = new firebase.auth.GithubAuthProvider();
+    try {
+      const credential = await firebase.auth().signInWithPopup(provider);
+      return handleUser(credential?.user);
+    } catch (error) {
+      return handleUser(false);
+    }
+  }
 
-          if (redirect) {
-            Router.push(redirect);
-          }
-        })
-    );
-  };
-
-  const signout = () => {
-    Router.push("/");
-
-    return firebase
-      .auth()
-      .signOut()
-      .then(() => handleUser(false));
-  };
+  async function signout() {
+    try {
+      await firebase.auth().signOut();
+    } catch (error) {}
+    handleUser(false);
+  }
 
   useEffect(() => {
     const unsubscribe = firebase.auth().onIdTokenChanged(handleUser);
-
     return () => unsubscribe();
   }, []);
 
@@ -70,7 +77,7 @@ function useAuthProvider() {
   };
 }
 
-const formatUser = async (user) => {
+function formatUser(user): User {
   return {
     uid: user.uid,
     email: user.email,
@@ -78,4 +85,4 @@ const formatUser = async (user) => {
     provider: user.providerData[0].providerId,
     photoUrl: user.photoURL,
   };
-};
+}
