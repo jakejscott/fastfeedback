@@ -1,7 +1,33 @@
+import { sign } from "crypto";
 import Head from "next/head";
+import { useAuth } from "../lib/auth";
 import styles from "../styles/Home.module.css";
 
+function AuthExample() {
+  const { signout, signinWithGitHub, loading, user } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (user) {
+    return (
+      <div>
+        <a onClick={() => signout()}>Sign out</a>
+        <div>{user.email}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <a onClick={() => signinWithGitHub()}>Sign in</a>
+    </div>
+  );
+}
+
 export default function Home() {
+  const { signinWithGitHub, loading, user } = useAuth();
   return (
     <div className={styles.container}>
       <Head>
@@ -11,6 +37,7 @@ export default function Home() {
 
       <main className={styles.main}>
         <h1 className={styles.title}>Fastfeedback</h1>
+        <AuthExample />
       </main>
 
       <footer className={styles.footer}>
