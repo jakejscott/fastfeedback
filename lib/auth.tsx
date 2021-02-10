@@ -32,36 +32,19 @@ function useAuthProvider() {
 
   const signinWithGitHub = async (redirect) => {
     setLoading(true);
+    return (
+      firebase
+        .auth()
+        //.signInWithRedirect(new firebase.auth.GithubAuthProvider())
+        .signInWithPopup(new firebase.auth.GithubAuthProvider())
+        .then((response) => {
+          handleUser(response.user);
 
-    firebase
-      .auth()
-      .getRedirectResult()
-      .then(function (result) {
-        if (result.user) {
-          handleUser(result.user);
-        }
-      })
-      .catch(function (error) {
-        console.error(error);
-      });
-
-    var provider = new firebase.auth.GithubAuthProvider();
-
-    return firebase.auth().signInWithRedirect(provider);
-
-    // return (
-    //   firebase
-    //     .auth()
-    //     //.signInWithRedirect(new firebase.auth.GithubAuthProvider())
-    //     .signInWithPopup(new firebase.auth.GithubAuthProvider())
-    //     .then((response) => {
-    //       handleUser(response.user);
-
-    //       if (redirect) {
-    //         Router.push(redirect);
-    //       }
-    //     })
-    // );
+          if (redirect) {
+            Router.push(redirect);
+          }
+        })
+    );
   };
 
   const signout = () => {
