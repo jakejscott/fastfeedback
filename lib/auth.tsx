@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import firebase from "./firebase";
 import { createUser } from "./firestore";
 
-interface User {
+export interface User {
   uid: string;
   email: string;
   name: string;
@@ -12,8 +12,8 @@ interface User {
 
 interface UserAuthProvider {
   loading: boolean;
-  user: User | false;
-  signinWithGitHub(): Promise<User | false>;
+  user?: User;
+  signinWithGitHub(): Promise<User>;
   signout(): Promise<void>;
 }
 
@@ -29,10 +29,10 @@ export function useAuth() {
 }
 
 function useAuthProvider(): UserAuthProvider {
-  const [user, setUser] = useState<User | false>(null);
+  const [user, setUser] = useState<User>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  async function handleUser(rawUser): Promise<User | false> {
+  async function handleUser(rawUser): Promise<User> {
     if (rawUser) {
       const user = formatUser(rawUser);
       await createUser(user.uid, user);
@@ -40,13 +40,13 @@ function useAuthProvider(): UserAuthProvider {
       setLoading(false);
       return user;
     } else {
-      setUser(false);
+      setUser(null);
       setLoading(false);
-      return false;
+      return null;
     }
   }
 
-  async function signinWithGitHub(): Promise<User | false> {
+  async function signinWithGitHub(): Promise<User> {
     setLoading(true);
     const provider = new firebase.auth.GithubAuthProvider();
     try {
